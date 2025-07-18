@@ -6,11 +6,11 @@ import { SerialPortDarwin } from "./darwin/serial_port.ts"
 import { getPortsLinux } from "./linux/enumerate.ts"
 import { SerialPortLinux } from "./linux/serial_port.ts"
 
-export function getPorts(): Promise<SerialPortInfo[]> {
+export function getPorts(): SerialPortInfo[] {
     if (Deno.build.os === "windows") {
-        return Promise.resolve(getPortsWin())
+        return getPortsWin()
     } else if (Deno.build.os === "darwin") {
-        return Promise.resolve(getPortsDarwin())
+        return getPortsDarwin()
     } else if (Deno.build.os === "linux") {
         return getPortsLinux()
     } else {

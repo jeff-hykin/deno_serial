@@ -25,7 +25,7 @@ deno run --allow-ffi -r https://raw.githubusercontent.com/jeff-hykin/deno_serial
 ```ts
 import { getPorts, open } from "https://esm.sh/gh/jeff-hykin/deno_serial/mod.ts";
 
-const ports = await getPorts();
+const ports = getPorts();
 console.log("Ports:", ports);
 
 const port = await open(ports[0].name, { baudRate: 9600 });

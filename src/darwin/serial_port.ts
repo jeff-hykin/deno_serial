@@ -1,5 +1,5 @@
 import { cString, bigIntTo64IntLittleEndianBytes, int64LittleEndianBytesToBigInt } from "../common/util.ts";
-import getDarwinLibSystem, { UnixError, unwrap, CREAD, CLOCAL, PARENB, PARODD, CSTOPB, CSIZE, CS7, CS8, CRTSCTS, IXON, IXOFF, IXANY, ICANON, ECHO, ECHOE, ISIG, VMIN, VTIME, TCSANOW, F_SETFL, O_RDWR, O_NOCTTY, O_NDELAY, OPOST, INPCK, IGNPAR, } from "./nix.ts";
+import { getDarwinLibSystem, UnixError, unwrap, CREAD, CLOCAL, PARENB, PARODD, CSTOPB, CSIZE, CS7, CS8, CRTSCTS, IXON, IXOFF, IXANY, ICANON, ECHO, ECHOE, ISIG, VMIN, VTIME, TCSANOW, F_SETFL, O_RDWR, O_NOCTTY, O_NDELAY, OPOST, INPCK, IGNPAR, } from "./system_apis/lib_system.ts";
 import {
   SerialOptions,
   SerialPort,

@@ -1,7 +1,7 @@
-import getIokit, { ioreturn, kIOSerialBSDServiceValue } from "./iokit.ts";
-import getCorefoundation, { createCFString } from "./corefoundation.ts";
+import { getIokit, ioreturn, kIOSerialBSDServiceValue } from "./system_apis/iokit.ts";
+import { getCorefoundation, createCFString } from "./system_apis/corefoundation.ts";
 import { cString, deref, refptr } from "../common/util.ts";
-import { SerialPortInfo } from "../common/web_serial.ts";
+import { SerialPortInfo } from "../common/serial_port.ts";
 
 const stringBuffer = new Uint8Array(256);
 

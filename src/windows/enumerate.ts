@@ -1,5 +1,7 @@
 import { Di, Reg, unwrap } from "./deps.ts";
-import { PortInfo, PortType } from "../common/port_info.ts";
+import { SerialPortInfo } from "../common/serial_port.ts";
+
+export type PortType = "USB" | "Bluetooth" | "PCI";
 
 function getPortName(
   devInfoList: Deno.PointerValue,
@@ -108,12 +110,12 @@ export function SetupDiClassGuidsFromNameA(className: string) {
   return guids;
 }
 
-export function getPortsWin(): PortInfo[] {
+export function getPortsWin(): SerialPortInfo[] {
   const devInfoData = Di.allocSP_DEVINFO_DATA({
     cbSize: Di.sizeofSP_DEVINFO_DATA,
   });
 
-  const ports: PortInfo[] = [];
+  const ports: SerialPortInfo[] = [];
   for (
     const guid of SetupDiClassGuidsFromNameA("Ports")
   ) {

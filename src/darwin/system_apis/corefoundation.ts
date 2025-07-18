@@ -1,7 +1,7 @@
-import { settings } from "./settings.ts"
+import { settings } from "../settings.ts"
 
 let corefoundation
-const getCorefoundation = (corefoundationPath=null) => {
+export const getCorefoundation = (corefoundationPath=null) => {
     return corefoundation = corefoundation || Deno.dlopen(corefoundationPath||settings.corefoundationPath, {
         CFStringCreateWithBytes: {
             parameters: ["pointer", "buffer", "i32", "u32", "bool"],
@@ -49,8 +49,6 @@ const getCorefoundation = (corefoundationPath=null) => {
         },
     }).symbols
 }
-
-export default getCorefoundation
 
 export function createCFString(str: string) {
     const buffer = new TextEncoder().encode(str)

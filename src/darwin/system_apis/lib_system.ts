@@ -1,9 +1,7 @@
-import { settings } from "./settings.ts"
-
-// TODO: rename
+import { settings } from "../settings.ts"
 
 let darwinLibSystem
-const getDarwinLibSystem = (pathToLibSystem=null)=>{
+export const getDarwinLibSystem = (pathToLibSystem=null)=>{
     return darwinLibSystem=darwinLibSystem||Deno.dlopen(pathToLibSystem||settings.darwinLibcPath, {
         open: {
             parameters: ["buffer", "i32", "i32"],
@@ -111,8 +109,6 @@ const getDarwinLibSystem = (pathToLibSystem=null)=>{
         },
     }).symbols;
 }
-
-export default getDarwinLibSystem;
 
 export class UnixError extends Error {
   errno: number;

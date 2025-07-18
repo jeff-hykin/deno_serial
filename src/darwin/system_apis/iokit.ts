@@ -1,10 +1,10 @@
-import { settings } from "./settings.ts"
-import { cString } from "../common/util.ts";
+import { settings } from "../settings.ts"
+import { cString } from "../../common/util.ts";
 
 export const kIOSerialBSDServiceValue = cString("IOSerialBSDClient");
 
 let iokit
-export default (iokitPath=null)=>{
+export const getIokit = (iokitPath=null)=>{
     return iokit = iokit || Deno.dlopen(iokitPath||settings.iokitPath, {
         IOServiceMatching: {
             parameters: ["buffer"],

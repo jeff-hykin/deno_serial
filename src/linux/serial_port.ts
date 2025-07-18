@@ -21,199 +21,47 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
-
 import type { SerialOptions, SerialPort } from "../common/serial_port.ts"
-import { settings } from "./settings.ts"
+import { isPlatformLittleEndian } from "../common/util.ts"
+import {
+    getLibc,
+    // helpers
+    numberBaudrateToBaudrateValue,
+    nonBlockingErrno,
+    errno,
+    strerror,
+    geterrnoString,
+    getNonBlockingErrnoString,
+    // constants
+    O_RDWR,
+    O_NOCTTY,
+    O_SYNC,
+    TCSANOW,
+    CSIZE,
+    CS5,
+    CS6,
+    CS7,
+    CS8,
+    CSTOPB,
+    CREAD,
+    PARENB,
+    PARODD,
+    HUPCL,
+    CLOCAL,
+    CRTSCTS,
+    VTIME,
+    VMIN,
+} from "./system_apis/libc.ts"
 
-// TODO: move this to a separate file
-const O_RDWR = 0x2
-const O_NOCTTY = 0x100
-const O_SYNC = 0x101000
-const TCSANOW = 0
-
-const CSIZE = 0o000060
-const CS5 = 0o000000
-const CS6 = 0o000020
-const CS7 = 0o000040
-const CS8 = 0o000060
-const CSTOPB = 0o000100
-const CREAD = 0o000200
-const PARENB = 0o000400
-const PARODD = 0o001000
-const HUPCL = 0o002000
-const CLOCAL = 0o004000
-const CRTSCTS = 0o20000000000
-const VTIME = 5
-const VMIN = 6
-
-function numberBaudrateToBaudrateValue(num: number) {
-    switch (num) {
-        case 9600:
-            return 0o000015
-        case 19200:
-            return 0o000016
-        case 38400:
-            return 0o000017
-        case 57600:
-            return 0o010001
-        case 115200:
-            return 0o010002
-        case 230400:
-            return 0o010003
-        case 460800:
-            return 0o010004
-        case 500000:
-            return 0o010005
-        case 576000:
-            return 0o010006
-        case 921600:
-            return 0o010007
-        case 1000000:
-            return 0o010010
-        case 1152000:
-            return 0o010011
-        case 1500000:
-            return 0o010012
-        case 2000000:
-            return 0o010013
-        case 2500000:
-            return 0o010014
-        case 3000000:
-            return 0o010015
-        case 3500000:
-            return 0o010016
-        case 4000000:
-            return 0o010017
-    }
-    throw new Error("unsupported baudrate")
-}
-
-let library
-const getLibrary = () => {
-    if (library) {
-        return library
-    }
-
-    const possibleLibs = [settings.defaultLibcPath, "/lib/libc.so.6", "/lib64/libc.so.6", "/lib64/libc.so.6", "/usr/lib/aarch64-linux-gnu/libc.so.6", "/usr/lib/aarch64-linux-gnu/libc.so"].filter((each) => each)
-
-    for (let eachPath of possibleLibs) {
-        let exists = false
-        try {
-            Deno.statSync(eachPath)
-            exists = true
-        } catch (error) {}
-        if (exists) {
-            library = Deno.dlopen(eachPath, {
-                open: {
-                    parameters: ["pointer", "i32"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-                close: {
-                    parameters: ["i32"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-                write: {
-                    parameters: ["i32", "pointer", "usize"],
-                    result: "isize",
-                    nonblocking: false,
-                },
-                read: {
-                    parameters: ["i32", "pointer", "usize"],
-                    result: "isize",
-                    nonblocking: true,
-                },
-                non_blocking__errno_location: {
-                    parameters: [],
-                    result: "pointer",
-                    nonblocking: true,
-                    name: "__errno_location",
-                },
-                __errno_location: {
-                    parameters: [],
-                    result: "pointer",
-                    nonblocking: false,
-                },
-                strerror: {
-                    parameters: ["i32"],
-                    result: "pointer",
-                    nonblocking: false,
-                },
-                tcgetattr: {
-                    parameters: ["i32", "pointer"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-                tcsetattr: {
-                    parameters: ["i32", "i32", "pointer"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-                cfsetspeed: {
-                    parameters: ["pointer", "u32"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-            } as const)
-            break
-        }
-    }
-}
-
-async function nonBlockingErrno() {
-    getLibrary()
-    const ret = await library.symbols.non_blocking__errno_location()
-    if (ret === null) {
-        return 0
-    }
-    const ptrView = new Deno.UnsafePointerView(ret)
-    return ptrView.getInt32()
-}
-
-async function errno() {
-    getLibrary()
-    const ret = await library.symbols.__errno_location()
-    if (ret === null) {
-        return 0
-    }
-    const ptrView = new Deno.UnsafePointerView(ret)
-    return ptrView.getInt32()
-}
-
-async function strerror(errnum: number) {
-    getLibrary()
-    const ret = await library.symbols.strerror(errnum)
-    if (ret === null) {
-        return ""
-    }
-    const ptrView = new Deno.UnsafePointerView(ret)
-    return ptrView.getCString()
-}
-
-async function geterrnoString() {
-    return strerror(await errno())
-}
-
-async function getNonBlockingErrnoString() {
-    return strerror(await nonBlockingErrno())
-}
-
-function is_platform_little_endian(): boolean {
-    const buffer = new ArrayBuffer(2)
-    new DataView(buffer).setInt16(0, 256, true)
-    return new Int16Array(buffer)[0] === 256
-}
-
+let libc
 export class SerialPortLinux implements AsyncDisposable, SerialPort {
     name?: string;
     options?: SerialOptions;
     _fd: number | undefined
     _state: "opened" | "closed" | "uninitialized" = "uninitialized"
-    options: SerialOptions | undefined
 
     constructor(name: string) {
-        getLibrary()
+        libc = getLibc()
         this.name = name
     }
 
@@ -245,7 +93,7 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
 
         this.options = options
         const buffer = new TextEncoder().encode(options.name)
-        const fd = await library.symbols.open(Deno.UnsafePointer.of(buffer), O_RDWR | O_NOCTTY | O_SYNC)
+        const fd = await libc.symbols.open(Deno.UnsafePointer.of(buffer), O_RDWR | O_NOCTTY | O_SYNC)
 
         if (fd < 0) {
             throw new Error(`Couldn't open '${options.name}': ${await geterrnoString()}`)
@@ -254,15 +102,15 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
         // termios tty{};
         const tty = new ArrayBuffer(100)
         const ttyPtr = Deno.UnsafePointer.of(tty)
-        if ((await library.symbols.tcgetattr(fd, ttyPtr)) != 0) {
+        if ((await libc.symbols.tcgetattr(fd, ttyPtr)) != 0) {
             SerialPortLinux._internalClose(fd)
             throw new Error(`tcgetattr: ${await geterrnoString()}`)
         }
 
-        await library.symbols.cfsetspeed(ttyPtr, baudRate)
+        await libc.symbols.cfsetspeed(ttyPtr, baudRate)
 
         const dataView = new DataView(tty)
-        const littleEndian = is_platform_little_endian()
+        const littleEndian = isPlatformLittleEndian()
         dataView.setUint32(0, 0, littleEndian) // c_iflag
         dataView.setUint32(4, 0, littleEndian) // c_oflag
 
@@ -294,7 +142,7 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
         dataView.setUint8(17 + VTIME, timeoutInTenthsOfASecond)
         dataView.setUint8(17 + VMIN, options.minimumNumberOfCharsRead ?? 0)
 
-        if ((await library.symbols.tcsetattr(fd, TCSANOW, ttyPtr)) != 0) {
+        if ((await libc.symbols.tcsetattr(fd, TCSANOW, ttyPtr)) != 0) {
             SerialPortLinux._internalClose(fd)
             throw new Error(`tcsetattr: ${await geterrnoString()}`)
         }
@@ -309,7 +157,7 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
         if (typeof strOrBytes === "string") {
             strOrBytes = new TextEncoder().encode(strOrBytes)
         }
-        const wlen = Number(await library.symbols.write(this._fd, Deno.UnsafePointer.of(strOrBytes), BigInt(strOrBytes.byteLength)))
+        const wlen = Number(await libc.symbols.write(this._fd, Deno.UnsafePointer.of(strOrBytes), BigInt(strOrBytes.byteLength)))
         if (wlen < 0) {
             throw new Error(`Error while writing: ${await geterrnoString()}`)
         }
@@ -326,7 +174,7 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
         const bufferSize = this?.options?.bufferSize ?? 255
         const buffer = new Uint8Array(bufferSize + 1)
         while (true) {
-            let howManyBytes = await library.symbols.read(this._fd, Deno.UnsafePointer.of(buffer), BigInt(bufferSize))
+            let howManyBytes = await libc.symbols.read(this._fd, Deno.UnsafePointer.of(buffer), BigInt(bufferSize))
             if (typeof howManyBytes === "bigint") {
                 howManyBytes = Number(howManyBytes)
             }
@@ -348,7 +196,7 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
         if (fd === undefined) {
             return
         }
-        const ret = await library.symbols.close(fd)
+        const ret = await libc.symbols.close(fd)
         if (ret < 0) {
             throw new Error(`Error while closing: ${await geterrnoString()}`)
         }
