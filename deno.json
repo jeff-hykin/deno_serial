@@ -1,5 +1,0 @@
-{
-  "tasks": {
-    "print-ports": "deno run --allow-ffi --unstable examples/print_ports.ts"
-  }
-}

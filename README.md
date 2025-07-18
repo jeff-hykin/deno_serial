@@ -38,8 +38,10 @@ let data = await port.read()
 port.close();
 ```
 
+
 ## License
 
-Apache-2.0. Check [LICENSE](./LICENSE) for more information.
-
-Copyright © 2022-2023 DjDeveloperr
+Modifications from original project:
+- the code actually works on Linux and MacOS now
+- reorganized codebase
+- redid interface
