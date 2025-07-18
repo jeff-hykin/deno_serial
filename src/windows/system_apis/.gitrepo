@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/ingydotnet/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:DjDeveloperr/deno_win32.git
+	branch = main
+	commit = 5cd87d08f25c0ec6e8dd2b26e37d844edf7f7347
+	parent = 430c32caf7d17fd2115442e8f22e94a9f00aea73
+	method = merge
+	cmdver = 0.4.5

@@ -1,0 +1,25 @@
+{
+  "tasks": {
+    "gen": "deno run -A --unstable generator/gen.ts",
+    "check": "deno check --unstable api/UI/mod.ts"
+  },
+  "fmt": {
+    "exclude": [
+      "api",
+      "win32_apis.json"
+    ]
+  },
+  "lint": {
+    "exclude": [
+      "api"
+    ],
+    "rules": {
+      "exclude": [
+        "no-inner-declarations",
+        "no-var",
+        "no-unused-vars",
+        "no-explicit-any"
+      ]
+    }
+  }
+}
