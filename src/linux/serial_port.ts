@@ -22,11 +22,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
-import type { SerialOptions, SerialPortInfo } from "../common/web_serial.ts"
+import type { SerialOptions, SerialPort } from "../common/serial_port.ts"
+import { settings } from "./settings.ts"
 
-export const settings = {
-    defaultLibcPath: null,
-}
+// TODO: move this to a separate file
 const O_RDWR = 0x2
 const O_NOCTTY = 0x100
 const O_SYNC = 0x101000
@@ -206,22 +205,21 @@ function is_platform_little_endian(): boolean {
     return new Int16Array(buffer)[0] === 256
 }
 
-export class SerialPortLinux implements AsyncDisposable {
-    #fd: number | undefined
-    #state: "opened" | "closed" | "uninitialized" = "uninitialized"
+export class SerialPortLinux implements AsyncDisposable, SerialPort {
+    name?: string;
+    options?: SerialOptions;
+    _fd: number | undefined
+    _state: "opened" | "closed" | "uninitialized" = "uninitialized"
     options: SerialOptions | undefined
 
-    constructor(name) {
+    constructor(name: string) {
         getLibrary()
         this.name = name
     }
 
-    get fd() {
-        return this.#fd
-    }
-
     async open(options: SerialOptions) {
-        if (this.#fd !== undefined) {
+        this.options = options
+        if (this._fd !== undefined) {
             throw new Error("already open")
         }
 
@@ -300,34 +298,35 @@ export class SerialPortLinux implements AsyncDisposable {
             SerialPortLinux._internalClose(fd)
             throw new Error(`tcsetattr: ${await geterrnoString()}`)
         }
-        this.#fd = fd
-        this.#state = "opened"
+        this._fd = fd
+        this._state = "opened"
     }
 
     async write(strOrBytes: string | Uint8Array) {
-        if (this.#state == "closed" || this.#state == "uninitialized") {
-            throw new Error(`Can't write to port because port is ${this.#state}`, "InvalidStateError")
+        if (this._state == "closed" || this._state == "uninitialized") {
+            throw new Error(`Can't write to port because port is ${this._state}`, "InvalidStateError")
         }
         if (typeof strOrBytes === "string") {
             strOrBytes = new TextEncoder().encode(strOrBytes)
         }
-        const wlen = await library.symbols.write(this.#fd, Deno.UnsafePointer.of(strOrBytes), BigInt(strOrBytes.byteLength))
+        const wlen = Number(await library.symbols.write(this._fd, Deno.UnsafePointer.of(strOrBytes), BigInt(strOrBytes.byteLength)))
         if (wlen < 0) {
             throw new Error(`Error while writing: ${await geterrnoString()}`)
         }
-        if (Number(wlen) !== strOrBytes.byteLength) {
-            throw new Error("Couldn't write data")
+        if (wlen !== strOrBytes.byteLength) {
+            throw new Error("Couldn't write data, but OS didn't report an error")
         }
+        return wlen
     }
 
-    async read() {
-        if (this.#state == "closed" || this.#state == "uninitialized") {
-            throw new Error(`Can't read from port because port is ${this.#state}`, "InvalidStateError")
+    async read(): Promise<Uint8Array> {
+        if (this._state == "closed" || this._state == "uninitialized") {
+            throw new Error(`Can't read from port because port is ${this._state}`, "InvalidStateError")
         }
         const bufferSize = this?.options?.bufferSize ?? 255
         const buffer = new Uint8Array(bufferSize + 1)
         while (true) {
-            let howManyBytes = await library.symbols.read(this.#fd, Deno.UnsafePointer.of(buffer), BigInt(bufferSize))
+            let howManyBytes = await library.symbols.read(this._fd, Deno.UnsafePointer.of(buffer), BigInt(bufferSize))
             if (typeof howManyBytes === "bigint") {
                 howManyBytes = Number(howManyBytes)
             }
@@ -340,8 +339,8 @@ export class SerialPortLinux implements AsyncDisposable {
     }
 
     async close() {
-        const fd = this.#fd
-        this.#fd = undefined
+        const fd = this._fd
+        this._fd = undefined
         await SerialPortLinux._internalClose(fd)
     }
 
@@ -360,6 +359,6 @@ export class SerialPortLinux implements AsyncDisposable {
     }
 
     [Symbol.for("Deno.customInspect")](inspect: typeof Deno.inspect, options: Deno.InspectOptions) {
-        return `SerialPort ${inspect({ name: this.name, state: this.#state }, options)}`
+        return `SerialPort ${inspect({ name: this.name, state: this._state }, options)}`
     }
 }

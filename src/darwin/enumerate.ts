@@ -1,8 +1,7 @@
 import getIokit, { ioreturn, kIOSerialBSDServiceValue } from "./iokit.ts";
 import getCorefoundation, { createCFString } from "./corefoundation.ts";
 import { cString, deref, refptr } from "../common/util.ts";
-import { SerialPort, SerialPortInfo } from "../common/web_serial.ts";
-import { SerialPortDarwin } from "./serial_port.ts";
+import { SerialPortInfo } from "../common/web_serial.ts";
 
 const stringBuffer = new Uint8Array(256);
 
@@ -24,10 +23,8 @@ const i16 = new Int16Array(1);
 const i16u8 = new Uint8Array(i16.buffer);
 const i32 = new Int32Array(1);
 const i32u8 = new Uint8Array(i32.buffer);
-let iokit
-let corefoundation
 function getParentDeviceByType(device: Deno.PointerValue, parentType: string) {
-  iokit = iokit || getIokit()
+  const iokit = getIokit()
   while (true) {
     iokit.IOObjectGetClass(device, stringBuffer);
     const className = readStringBuffer();
@@ -60,8 +57,8 @@ function getIntProperty(
   name: string,
   cfNumberType: number,
 ) {
-  iokit = iokit || getIokit()
-  corefoundation = corefoundation || getCorefoundation()
+  const iokit = getIokit()
+  const corefoundation = getCorefoundation()
   const key = createCFString(name);
   const value = iokit.IORegistryEntryCreateCFProperty(deviceType, key, null, 0);
   if (!value) {
@@ -87,7 +84,8 @@ function getIntProperty(
 }
 
 function getStringProperty(deviceType: Deno.PointerValue, name: string) {
-  iokit = iokit || getIokit()
+  const iokit = getIokit()
+  const corefoundation = getCorefoundation()
   const key = createCFString(name);
   const value = iokit.IORegistryEntryCreateCFProperty(deviceType, key, null, 0);
   if (!value) {
@@ -132,8 +130,8 @@ function getPortInfo(service: Deno.PointerValue, name: string): SerialPortInfo {
 
 export function getPortsDarwin(): SerialPortInfo[] {
   const ports: SerialPortInfo[] = [];
-  iokit = iokit || getIokit()
-  corefoundation = corefoundation || getCorefoundation()
+  const iokit = getIokit()
+  const corefoundation = getCorefoundation()
   const matchingServices = iokit.IOServiceMatching(kIOSerialBSDServiceValue);
 
   const key = createCFString("IOSerialBSDClientType");

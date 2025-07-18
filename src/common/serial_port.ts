@@ -1,91 +1,38 @@
-export enum DataBits {
-  FIVE = 5,
-  SIX = 6,
-  SEVEN = 7,
-  EIGHT = 8,
-}
-
-export enum Parity {
-  NONE = 0,
-  ODD = 1,
-  EVEN = 2,
-}
-
-export enum StopBits {
-  ONE = 0,
-  TWO = 2,
-}
-
-export enum FlowControl {
-  NONE,
-  SOFTWARE,
-  HARDWARE,
-}
-
-export interface SerialOpenOptions {
-  name: string;
-  baudRate:
-    | 9600
-    | 19200
-    | 38400
-    | 57600
-    | 115200
-    | 230400
-    | 460800
-    | 500000
-    | 576000
-    | 921600
-    | 1000000
-    | 1152000
-    | 1500000
-    | 2000000
-    | 2500000
-    | 3000000
-    | 3500000
-    | 4000000;
-  dataBits?: DataBits;
-  stopBits?: StopBits;
-  parity?: Parity;
-  flowControl?: FlowControl;
-  timeoutSeconds?: number;
-}
-
-export enum ClearBuffer {
-  INPUT,
-  OUTPUT,
-  ALL,
+export interface SerialPortInfo {
+    name: string // TODO: change to path
+    type?: string
+    friendlyName?: string
+    manufacturer?: string
+    usbVendorId?: number
+    usbProductId?: number
+    serialNumber?: string
 }
 
 export interface SerialPort {
-  readonly name?: string;
+    readonly name?: string
+    readonly options?: SerialOptions
+    open(options: SerialOptions): Promise<void>
+    close(): Promise<void>
+    read(): Promise<Uint8Array>
+    write(buffer: Uint8Array | string): Promise<number>
+}
 
-  baudRate: number;
-  dataBits: DataBits;
-  stopBits: StopBits;
-  parity: Parity;
-  flowControl: FlowControl;
-  timeout: number;
+export type ParityType = "none" | "even" | "odd"
+export type FlowControlType = "none" | "software" | "hardware"
 
-  read(p: Uint8Array): Promise<number | null>;
-  write(p: Uint8Array): Promise<number>;
+export interface SerialOptions {
+    baudRate: 9600 | 19200 | 38400 | 57600 | 115200 | 230400 | 460800 | 500000 | 576000 | 921600 | 1000000 | 1152000 | 1500000 | 2000000 | 2500000 | 3000000 | 3500000 | 4000000
+    dataBits?: 7 | 8 // default 8
+    stopBits?: 0 | 1 | 2 // default 1
+    parity?: ParityType // default none
+    flowControl?: FlowControlType
+    bufferSize?: number // default 255
+    timeoutSeconds?: number
+}
 
-  writeRequestToSend(level: boolean): void;
-  writeDataTerminalReady(level: boolean): void;
-
-  readClearToSend(): boolean;
-  readDataSetReady(): boolean;
-  readRingIndicator(): boolean;
-  readCarrierDetect(): boolean;
-
-  bytesToRead(): number;
-  bytesToWrite(): number;
-
-  clear(buffer: ClearBuffer): void;
-
-  setBreak(): void;
-  clearBreak(): void;
-
-  flush(): void;
-
-  close(): void;
+export interface SerialInputSignals {
+    dataCarrierDetect: boolean
+    ringIndicator: boolean
+    dataSetReady: boolean
+    clearToSend: boolean
 }

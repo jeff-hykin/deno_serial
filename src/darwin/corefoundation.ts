@@ -1,63 +1,58 @@
+import { settings } from "./settings.ts"
+
 let corefoundation
-const getCorefoundation = ()=>(corefoundation=corefoundation||Deno.dlopen(
-  "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation",
-  {
-    CFStringCreateWithBytes: {
-      parameters: ["pointer", "buffer", "i32", "u32", "bool"],
-      result: "pointer",
-    },
+const getCorefoundation = (corefoundationPath=null) => {
+    return corefoundation = corefoundation || Deno.dlopen(corefoundationPath||settings.corefoundationPath, {
+        CFStringCreateWithBytes: {
+            parameters: ["pointer", "buffer", "i32", "u32", "bool"],
+            result: "pointer",
+        },
 
-    CFRelease: {
-      parameters: ["pointer"],
-      result: "void",
-    },
+        CFRelease: {
+            parameters: ["pointer"],
+            result: "void",
+        },
 
-    CFDictionarySetValue: {
-      parameters: ["pointer", "pointer", "pointer"],
-      result: "void",
-    },
+        CFDictionarySetValue: {
+            parameters: ["pointer", "pointer", "pointer"],
+            result: "void",
+        },
 
-    CFRetain: {
-      parameters: ["pointer"],
-      result: "pointer",
-    },
+        CFRetain: {
+            parameters: ["pointer"],
+            result: "pointer",
+        },
 
-    CFDictionaryGetValue: {
-      parameters: ["pointer", "pointer"],
-      result: "pointer",
-    },
+        CFDictionaryGetValue: {
+            parameters: ["pointer", "pointer"],
+            result: "pointer",
+        },
 
-    CFGetTypeID: {
-      parameters: ["pointer"],
-      result: "u32",
-    },
+        CFGetTypeID: {
+            parameters: ["pointer"],
+            result: "u32",
+        },
 
-    CFStringGetTypeID: {
-      parameters: [],
-      result: "u32",
-    },
+        CFStringGetTypeID: {
+            parameters: [],
+            result: "u32",
+        },
 
-    CFStringGetCString: {
-      parameters: ["pointer", "buffer", "i32", "u32"],
-      result: "bool",
-    },
+        CFStringGetCString: {
+            parameters: ["pointer", "buffer", "i32", "u32"],
+            result: "bool",
+        },
 
-    CFNumberGetValue: {
-      parameters: ["pointer", "i32", "buffer"],
-      result: "bool",
-    },
-  },
-).symbols);
+        CFNumberGetValue: {
+            parameters: ["pointer", "i32", "buffer"],
+            result: "bool",
+        },
+    }).symbols
+}
 
-export default getCorefoundation;
+export default getCorefoundation
 
 export function createCFString(str: string) {
-  const buffer = new TextEncoder().encode(str);
-  return getCorefoundation().CFStringCreateWithBytes(
-    null,
-    buffer,
-    buffer.byteLength,
-    0x08000100,
-    false,
-  );
+    const buffer = new TextEncoder().encode(str)
+    return getCorefoundation().CFStringCreateWithBytes(null, buffer, buffer.byteLength, 0x08000100, false)
 }

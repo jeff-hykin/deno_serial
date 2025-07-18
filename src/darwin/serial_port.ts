@@ -1,64 +1,26 @@
-import { cString, Deferred } from "../common/util.ts";
-import getNix, { UnixError, unwrap, CREAD, CLOCAL, PARENB, PARODD, CSTOPB, CSIZE, CS7, CS8, CRTSCTS, IXON, IXOFF, IXANY, ICANON, ECHO, ECHOE, ISIG, VMIN, VTIME, TCSANOW, F_SETFL, O_RDWR, O_NOCTTY, O_NDELAY, OPOST, INPCK, IGNPAR, } from "./nix.ts";
+import { cString, bigIntTo64IntLittleEndianBytes, int64LittleEndianBytesToBigInt } from "../common/util.ts";
+import getDarwinLibSystem, { UnixError, unwrap, CREAD, CLOCAL, PARENB, PARODD, CSTOPB, CSIZE, CS7, CS8, CRTSCTS, IXON, IXOFF, IXANY, ICANON, ECHO, ECHOE, ISIG, VMIN, VTIME, TCSANOW, F_SETFL, O_RDWR, O_NOCTTY, O_NDELAY, OPOST, INPCK, IGNPAR, } from "./nix.ts";
 import {
   SerialOptions,
-  SerialOutputSignals,
   SerialPort,
-  SerialPortInfo,
-} from "../common/web_serial.ts";
+} from "../common/serial_port.ts";
 
-function bigIntTo64IntLittleEndianBytes(bigInt) {
-    const buffer = new ArrayBuffer(8); // 64-bit number (8 bytes)
-    const view = new DataView(buffer);
-    // Store the BigInt into the DataView in little-endian format
-    view.setBigUint64(0, bigInt, true); // true for little-endian
-    // Convert the ArrayBuffer into a Uint8Array
-    const uint8Array = new Uint8Array(buffer);
-    return uint8Array;
-}
-
-function int64LittleEndianBytesToBigInt(uint8Array) {
-    if (uint8Array instanceof Array) {
-        if (uint8Array.length != 8) {
-            throw new Error("Invalid input: Array must have exactly 8 elements for int64LittleEndianBytesToBigInt()");
-        }
-        uint8Array = new Uint8Array(uint8Array);
-    }
-    const buffer = uint8Array.buffer;
-    const view = new DataView(buffer);
-    // Extract the BigInt from the DataView, assuming little-endian byte order
-    const bigInt = view.getBigUint64(0, true); // true for little-endian
-    return bigInt;
-}
-
-let debug = false;
-let nix
 export class SerialPortDarwin implements SerialPort, AsyncDisposable {
-  #info: SerialPortInfo;
-  fd?: number;
-
-  #state: "opened" | "closed" | "uninitialized" = "uninitialized";
-  #bufferSize?: number;
+  name?: string;
+  options?: SerialOptions;
+  _fd?: number;
+  _state: "opened" | "closed" | "uninitialized" = "uninitialized";
+  _bufferSize?: number;
 
   constructor(name: string) {
-    nix = nix || getNix()
-    this.#info = {name};
+    this._darwinLibc = getDarwinLibSystem()
+    this.name = name
   }
   
-  get name() {
-    return this.#info.name
-  }
-
-  getInfo(): Promise<SerialPortInfo> {
-    return Promise.resolve(this.#info);
-  }
-
   async open(options: SerialOptions) {
-    if (this.#state == "opened") {
-      throw new Error("Port is already open", "InvalidStateError");
-    }
-    if (debug) {
-        console.log(`opening port ${this.name}`)
+    this.options = options
+    if (this._state == "opened") {
+      throw new Error("Port is already open");
     }
 
     if (options.dataBits && options.dataBits !== 7 && options.dataBits !== 8) {
@@ -92,21 +54,20 @@ export class SerialPortDarwin implements SerialPort, AsyncDisposable {
     }
     this.options = options;
     
-    debug && console.log(`calling nix.open()`)
     const shouldCreate = 0;
-    const fd = await nix.open(
-      cString(this.#info.name),
+    const fd = await this._darwinLibc.open(
+      cString(this.name),
       Number(O_RDWR | O_NOCTTY | O_NDELAY),
       shouldCreate,
     );
     unwrap(fd);
-    this.fd = fd;
+    this._fd = fd;
     
     // 
     // set all the termios settings
     // 
     var termiosStruct = new Uint8Array(72)
-    unwrap(nix.tcgetattr(fd, termiosStruct));
+    unwrap(this._darwinLibc.tcgetattr(fd, termiosStruct));
 
     const timeoutInSeconds = options.timeoutSeconds ?? 2
     let timeoutInTenthsOfASecond = Math.round(timeoutInSeconds*10)
@@ -118,28 +79,34 @@ export class SerialPortDarwin implements SerialPort, AsyncDisposable {
         timeoutInTenthsOfASecond = 255
     }
     
-    var iflag   = [0,0,0,0,0,0,0,0];
-    var oflag   = [0,0,0,0,0,0,0,0,];
-    var cflag   = [0,203,0,0,0,0,0,0,];
-    var lflag   = [0,0,0,0,0,0,0,0];
-    var cc      = [4, 255, 255, 127, 23, 21, 18, 255, 3, 28, 26, 25, 17, 19, 22, 15, 0, 20, 20, 255];
-    var unknown = [0,0,0,0];
-    var ispeed  = [128,37,0,0,0,0,0,0]; // [128,37,0,0,0,0,0,0] means baudRate = 9600, (cfsetispeed() below changes this though)
-    var ospeed  = [128,37,0,0,0,0,0,0];
+    // 
+    // default termios struct bits
+    // 
+    var iflagAsArray   = [0,0,0,0,0,0,0,0];
+    var oflagAsArray   = [0,0,0,0,0,0,0,0,];
+    var cflagAsArray   = [0,203,0,0,0,0,0,0,];
+    var lflagAsArray   = [0,0,0,0,0,0,0,0];
+    var ccAsArray      = [4, 255, 255, 127, 23, 21, 18, 255, 3, 28, 26, 25, 17, 19, 22, 15, 0, 20, 20, 255];
+    var unknownAsArray = [0,0,0,0];
+    var ispeedAsArray  = [128,37,0,0,0,0,0,0]; // [128,37,0,0,0,0,0,0] means baudRate = 9600, (cfsetispeed() below changes this though)
+    var ospeedAsArray  = [128,37,0,0,0,0,0,0];
     var termiosStruct = new Uint8Array([
-        ...iflag, 
-        ...oflag, 
-        ...cflag, 
-        ...lflag, 
-        ...cc, 
-        ...unknown,
-        ...ispeed,
-        ...ospeed,
+        ...iflagAsArray, 
+        ...oflagAsArray, 
+        ...cflagAsArray, 
+        ...lflagAsArray, 
+        ...ccAsArray, 
+        ...unknownAsArray,
+        ...ispeedAsArray,
+        ...ospeedAsArray,
     ])
     // set: baudRate
-    unwrap(nix.cfsetispeed(termiosStruct, options.baudRate));
-    unwrap(nix.cfsetospeed(termiosStruct, options.baudRate));
+    unwrap(this._darwinLibc.cfsetispeed(termiosStruct, options.baudRate));
+    unwrap(this._darwinLibc.cfsetospeed(termiosStruct, options.baudRate));
     
+    // 
+    // extract the termios struct values (it was just overwritten)
+    // 
     var iflag   = int64LittleEndianBytesToBigInt(termiosStruct.slice(0,8));
     var oflag   = int64LittleEndianBytesToBigInt(termiosStruct.slice(8,16));
     var cflag   = int64LittleEndianBytesToBigInt(termiosStruct.slice(16,24));
@@ -150,9 +117,12 @@ export class SerialPortDarwin implements SerialPort, AsyncDisposable {
     var ispeed  = termiosStruct.slice(56,64);
     var ospeed  = termiosStruct.slice(64,72);
     
-    cc[VMIN]    = 0;
+    // 
+    // manipulate the termios struct values
+    // 
+    cc[Number(VMIN)]    = 0;
     // set: timeout
-    cc[VTIME]   = timeoutInTenthsOfASecond;
+    cc[Number(VTIME)]   = timeoutInTenthsOfASecond;
 
     // set: size
     cflag &= ~CSIZE;       // Clear data size bits
@@ -230,30 +200,29 @@ export class SerialPortDarwin implements SerialPort, AsyncDisposable {
         ...ispeed,
         ...ospeed,
     ])
-    unwrap(nix.tcsetattr(fd, Number(TCSANOW), termiosStruct));
+    unwrap(this._darwinLibc.tcsetattr(fd, Number(TCSANOW), termiosStruct));
 
-    this.#state = "opened";
-    debug && console.log(`this.#state is:`,this.#state)
-    this.#bufferSize = options.bufferSize ?? 255;
+    this._state = "opened";
+    this._bufferSize = options.bufferSize ?? 255;
   }
 
-  async write(strOrBytes: string | Uint8Array) {
-    if (this.#state == "closed" || this.#state == "uninitialized") {
-        throw new Error(`Can't write to port because port is ${this.#state}`, "InvalidStateError");
+  write(strOrBytes: string | Uint8Array): Promise<number> {
+    if (this._state == "closed" || this._state == "uninitialized") {
+        throw new Error(`Can't write to port because port is ${this._state}`);
     }
     if (typeof strOrBytes === "string") {
       strOrBytes = new TextEncoder().encode(strOrBytes);
     }
-    return nix.write(this.fd, strOrBytes, strOrBytes.byteLength)
+    return this._darwinLibc.write(this._fd, strOrBytes, strOrBytes.byteLength)
   }
   
-  async read() {
-    if (this.#state == "closed" || this.#state == "uninitialized") {
-        throw new Error(`Can't read from port because port is ${this.#state}`, "InvalidStateError");
+  async read(): Promise<Uint8Array> {
+    if (this._state == "closed" || this._state == "uninitialized") {
+        throw new Error(`Can't read from port because port is ${this._state}`);
     }
-    const buf = new Uint8Array(this.#bufferSize+1);
+    const buf = new Uint8Array(this._bufferSize+1);
     while (true) {
-        let howManyBytes = unwrap(nix.read(this.fd, buf, this.#bufferSize));
+        let howManyBytes = unwrap(this._darwinLibc.read(this._fd, buf, this._bufferSize));
         if (typeof howManyBytes === "bigint") {
             howManyBytes = Number(howManyBytes)
         }
@@ -266,10 +235,10 @@ export class SerialPortDarwin implements SerialPort, AsyncDisposable {
   }
   
   close() {
-    if (this.#state !== "opened") {
-      throw new Error("Port is not open", "InvalidStateError");
+    if (this._state !== "opened") {
+      throw new Error("Port is not open");
     }
-    unwrap(nix.close(this.fd));
+    unwrap(this._darwinLibc.close(this._fd));
     return Promise.resolve();
   }
   
@@ -282,7 +251,7 @@ export class SerialPortDarwin implements SerialPort, AsyncDisposable {
     options: Deno.InspectOptions,
   ) {
     return `SerialPort ${
-      inspect({ name: this.#info.name, state: this.#state }, options)
+      inspect({ name: this.name, state: this._state }, options)
     }`;
   }
 }

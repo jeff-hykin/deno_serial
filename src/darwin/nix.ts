@@ -1,119 +1,124 @@
-// TODO: put errorno inside this open
-let nix
-const getNix = ()=>(nix=nix||Deno.dlopen("libSystem.dylib", {
-  open: {
-    parameters: ["buffer", "i32", "i32"],
-    result: "i32",
-    // nonblocking: true,
-  },
+import { settings } from "./settings.ts"
 
-  ioctl: {
-    parameters: ["i32", "i64"],
-    result: "i32",
-  },
+// TODO: rename
 
-  ioctl1: {
-    parameters: ["i32", "i64", "buffer"],
-    result: "i32",
-    name: "ioctl",
-  },
+let darwinLibSystem
+const getDarwinLibSystem = (pathToLibSystem=null)=>{
+    return darwinLibSystem=darwinLibSystem||Deno.dlopen(pathToLibSystem||settings.darwinLibcPath, {
+        open: {
+            parameters: ["buffer", "i32", "i32"],
+            result: "i32",
+            // nonblocking: true,
+        },
 
-  tcgetattr: {
-    parameters: ["i32", "buffer"],
-    result: "i32",
-  },
+        ioctl: {
+            parameters: ["i32", "i64"],
+            result: "i32",
+        },
 
-  tcsetattr: {
-    parameters: ["i32", "i32", "buffer"],
-    result: "i32",
-  },
+        ioctl1: {
+            parameters: ["i32", "i64", "buffer"],
+            result: "i32",
+            name: "ioctl",
+        },
 
-  cfmakeraw: {
-    parameters: ["buffer"],
-    result: "void",
-  },
+        tcgetattr: {
+            parameters: ["i32", "buffer"],
+            result: "i32",
+        },
 
-  fcntl: {
-    parameters: ["i32", "i32", "i32"],
-    result: "i32",
-  },
+        tcsetattr: {
+            parameters: ["i32", "i32", "buffer"],
+            result: "i32",
+        },
 
-  strerror: {
-    parameters: ["i32"],
-    result: "pointer",
-  },
+        cfmakeraw: {
+            parameters: ["buffer"],
+            result: "void",
+        },
 
-  aio_read: {
-    parameters: ["buffer"],
-    result: "i32",
-  },
+        fcntl: {
+            parameters: ["i32", "i32", "i32"],
+            result: "i32",
+        },
 
-  aio_write: {
-    parameters: ["buffer"],
-    result: "i32",
-  },
+        strerror: {
+            parameters: ["i32"],
+            result: "pointer",
+        },
 
-  aio_suspend: {
-    parameters: ["buffer", "i32", "buffer"],
-    result: "i32",
-    nonblocking: true,
-  },
+        aio_read: {
+            parameters: ["buffer"],
+            result: "i32",
+        },
 
-  aio_cancel: {
-    parameters: ["i32", "buffer"],
-    result: "i32",
-  },
+        aio_write: {
+            parameters: ["buffer"],
+            result: "i32",
+        },
 
-  aio_error: {
-    parameters: ["buffer"],
-    result: "i32",
-  },
+        aio_suspend: {
+            parameters: ["buffer", "i32", "buffer"],
+            result: "i32",
+            nonblocking: true,
+        },
 
-  aio_return: {
-    parameters: ["buffer"],
-    result: "i64",
-  },
+        aio_cancel: {
+            parameters: ["i32", "buffer"],
+            result: "i32",
+        },
 
-  cfsetospeed: {
-    parameters: ["buffer", "i32"],
-    result: "i32",
-  },
+        aio_error: {
+            parameters: ["buffer"],
+            result: "i32",
+        },
 
-  cfsetispeed: {
-    parameters: ["buffer", "i32"],
-    result: "i32",
-  },
+        aio_return: {
+            parameters: ["buffer"],
+            result: "i64",
+        },
 
-  tcflush: {
-    parameters: ["i32", "i32"],
-    result: "i32",
-  },
+        cfsetospeed: {
+            parameters: ["buffer", "i32"],
+            result: "i32",
+        },
 
-  close: {
-    parameters: ["i32"],
-    result: "i32",
-  },
+        cfsetispeed: {
+            parameters: ["buffer", "i32"],
+            result: "i32",
+        },
 
-  read: {
-    parameters: ["i32", "buffer", "i32"],
-    result: "i32",
-    // nonblocking: true,
-  },
+        tcflush: {
+            parameters: ["i32", "i32"],
+            result: "i32",
+        },
 
-  write: {
-    parameters: ["i32", "buffer", "i32"],
-    result: "i32",
-    // nonblocking: true,
-  },
-}).symbols);
+        close: {
+            parameters: ["i32"],
+            result: "i32",
+        },
 
-export default getNix;
+        read: {
+            parameters: ["i32", "buffer", "i32"],
+            result: "i32",
+            // nonblocking: true,
+        },
+
+        write: {
+            parameters: ["i32", "buffer", "i32"],
+            result: "i32",
+            // nonblocking: true,
+        },
+    }).symbols;
+}
+
+export default getDarwinLibSystem;
 
 export class UnixError extends Error {
   errno: number;
   constructor(errno: number) {
-    getNix()
-    const str = nix.strerror(errno);
+    getDarwinLibSystem()
+    const str = darwinLibSystem.strerror(errno);
     const jstr = Deno.UnsafePointerView.getCString(str!);
     super(`UnixError: ${errno}: ${jstr}`);
     this.errno = errno;
@@ -139,7 +144,7 @@ export function unwrap(result: number, error?: number) {
   return result;
 }
 
-// note Im pretty sure these are different than linix values for the same names (these came from testing on macOS with Apple clang version 14.0.0)
+// note Im pretty sure these are different than linux values for the same names (these came from testing on macOS with Apple clang version 14.0.0)
 export const CREAD =    0b000000100000000000n
 export const CLOCAL =   0b001000000000000000n
 export const PARENB =   0b000001000000000000n
