@@ -92,6 +92,62 @@ export const getLibc = () => {
     }
 
     const possibleLibs = [settings.defaultLibcPath, "/lib/libc.so.6", "/lib64/libc.so.6", "/lib64/libc.so.6", "/usr/lib/aarch64-linux-gnu/libc.so.6", "/usr/lib/aarch64-linux-gnu/libc.so"].filter((each) => each) as string[]
+    const standardPosixInterfaces = {
+        open: {
+            parameters: ["pointer", "i32"],
+            result: "i32",
+            nonblocking: false,
+        },
+        close: {
+            parameters: ["i32"],
+            result: "i32",
+            nonblocking: false,
+        },
+        write: {
+            parameters: ["i32", "pointer", "usize"],
+            result: "isize",
+            nonblocking: false,
+        },
+        read: {
+            parameters: ["i32", "pointer", "usize"],
+            result: "isize",
+            nonblocking: true,
+        },
+        strerror: {
+            parameters: ["i32"],
+            result: "pointer",
+            nonblocking: false,
+        },
+        tcgetattr: {
+            parameters: ["i32", "pointer"],
+            result: "i32",
+            nonblocking: false,
+        },
+        tcsetattr: {
+            parameters: ["i32", "i32", "pointer"],
+            result: "i32",
+            nonblocking: false,
+        },
+        cfsetspeed: {
+            parameters: ["pointer", "u32"],
+            result: "i32",
+            nonblocking: false,
+        },
+    } as const
+    const glibcInterfaces = {
+        ...standardPosixInterfaces,
+        non_blocking__errno_location: {
+            parameters: [],
+            result: "pointer",
+            nonblocking: true,
+            name: "__errno_location",
+        },
+        __errno_location: {
+            parameters: [],
+            result: "pointer",
+            nonblocking: false,
+        },
+    } as const
 
     for (const eachPath of possibleLibs) {
         let exists = false
@@ -100,59 +156,11 @@ export const getLibc = () => {
             exists = true
         } catch (_error) {}
         if (exists) {
-            libc = Deno.dlopen(eachPath, {
-                open: {
-                    parameters: ["pointer", "i32"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-                close: {
-                    parameters: ["i32"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-                write: {
-                    parameters: ["i32", "pointer", "usize"],
-                    result: "isize",
-                    nonblocking: false,
-                },
-                read: {
-                    parameters: ["i32", "pointer", "usize"],
-                    result: "isize",
-                    nonblocking: true,
-                },
-                non_blocking__errno_location: {
-                    parameters: [],
-                    result: "pointer",
-                    nonblocking: true,
-                    name: "__errno_location",
-                },
-                __errno_location: {
-                    parameters: [],
-                    result: "pointer",
-                    nonblocking: false,
-                },
-                strerror: {
-                    parameters: ["i32"],
-                    result: "pointer",
-                    nonblocking: false,
-                },
-                tcgetattr: {
-                    parameters: ["i32", "pointer"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-                tcsetattr: {
-                    parameters: ["i32", "i32", "pointer"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-                cfsetspeed: {
-                    parameters: ["pointer", "u32"],
-                    result: "i32",
-                    nonblocking: false,
-                },
-            } as const)
+            try {
+                libc = Deno.dlopen(eachPath, glibcInterfaces)
+            } catch (error) {
+                libc = Deno.dlopen(eachPath, standardPosixInterfaces)
+            }
             break
         }
     }
@@ -160,6 +168,10 @@ export const getLibc = () => {
 
 export async function nonBlockingErrno() {
     getLibc()
+    // non-glibc systems have their own way
+    if (!libc.symbols.non_blocking__errno_location) {
+        return 0
+    }
     const ret = await libc.symbols.non_blocking__errno_location()
     if (ret === null) {
         return 0
@@ -170,6 +182,10 @@ export async function nonBlockingErrno() {
 
 export async function errno() {
     getLibc()
+    // non-glibc systems have their own way
+    if (!libc.symbols.__errno_location) {
+        return 0
+    }
     const ret = await libc.symbols.__errno_location()
     if (ret === null) {
         return 0
