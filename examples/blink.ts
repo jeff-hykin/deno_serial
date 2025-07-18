@@ -1,4 +1,4 @@
-import { listPorts, connect } from "../src/main.ts"
+import { listPorts, connect } from "../main/main.ts"
 
 const portInfo = (await listPorts()).find((port) => port.type === "USB")
 if (!portInfo) {

@@ -23,7 +23,7 @@ deno run --allow-ffi -r https://raw.githubusercontent.com/jeff-hykin/deno_serial
 ## Usage
 
 ```ts
-import { listPorts, connect } from "https://esm.sh/gh/jeff-hykin/deno_serial/src/main.ts";
+import { listPorts, connect } from "https://esm.sh/gh/jeff-hykin/deno_serial/main/main.ts";
 
 const ports = await listPorts();
 console.log("Ports:", ports);

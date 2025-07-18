@@ -1,4 +1,4 @@
-import { listPorts } from "../src/main.ts"
+import { listPorts } from "../main/main.ts"
 
 const ports = await listPorts()
 
