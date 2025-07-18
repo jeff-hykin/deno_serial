@@ -1,4 +1,8 @@
 import { Di, Reg, unwrap } from "./deps.ts";
+import * as Di from "./system_apis/api/Devices/DeviceAndDriverInstallation.ts";
+export * as Reg from "./system_apis/api/System/Registry.ts";
+export { unwrap } from "./system_apis/util.ts";
+
 import { SerialPortInfo } from "../common/serial_port.ts";
 
 export type PortType = "USB" | "Bluetooth" | "PCI";

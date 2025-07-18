@@ -1,6 +1,10 @@
 import type { SerialPort, SerialOptions } from "../common/serial_port.ts"
 import { getBit, setBit } from "../common/util.ts"
-import { Comm, Foundation, Fs, OverlappedPromise, unwrap } from "./deps.ts"
+export * as Comm from "./system_apis/api/Devices/Communication.ts";
+export * as Foundation from "./system_apis/api/Foundation.ts";
+export * as Fs from "./system_apis/api/Storage/FileSystem.ts";
+export { OverlappedPromise } from "./system_apis/overlapped.ts";
+export { unwrap } from "./system_apis/util.ts";
 
 export enum ClearBuffer {
     INPUT,
