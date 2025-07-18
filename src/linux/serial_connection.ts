@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
-import type { SerialOptions, SerialPort } from "../common/serial_port.ts"
+import type { SerialOptions, SerialConnection } from "../common/serial_port.ts"
 import { isPlatformLittleEndian } from "../common/util.ts"
 import {
     getLibc,
@@ -54,7 +54,7 @@ import {
 } from "./system_apis/libc.ts"
 
 let libc
-export class SerialPortLinux implements AsyncDisposable, SerialPort {
+export class SerialConnectionLinux implements AsyncDisposable, SerialConnection {
     name?: string
     options?: SerialOptions
     _fd: number | undefined
@@ -103,7 +103,7 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
         const tty = new ArrayBuffer(100)
         const ttyPtr = Deno.UnsafePointer.of(tty)
         if ((await libc.symbols.tcgetattr(fd, ttyPtr)) != 0) {
-            SerialPortLinux._internalClose(fd)
+            SerialConnectionLinux._internalClose(fd)
             throw new Error(`tcgetattr: ${await geterrnoString()}`)
         }
 
@@ -143,7 +143,7 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
         dataView.setUint8(17 + VMIN, options.minimumNumberOfCharsRead ?? 0)
 
         if ((await libc.symbols.tcsetattr(fd, TCSANOW, ttyPtr)) != 0) {
-            SerialPortLinux._internalClose(fd)
+            SerialConnectionLinux._internalClose(fd)
             throw new Error(`tcsetattr: ${await geterrnoString()}`)
         }
         this._fd = fd
@@ -189,7 +189,7 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
     async close() {
         const fd = this._fd
         this._fd = undefined
-        await SerialPortLinux._internalClose(fd)
+        await SerialConnectionLinux._internalClose(fd)
     }
 
     static async _internalClose(fd: number | undefined) {
@@ -207,6 +207,6 @@ export class SerialPortLinux implements AsyncDisposable, SerialPort {
     }
 
     [Symbol.for("Deno.customInspect")](inspect: typeof Deno.inspect, options: Deno.InspectOptions) {
-        return `SerialPort ${inspect({ name: this.name, state: this._state }, options)}`
+        return `SerialConnection ${inspect({ name: this.name, state: this._state }, options)}`
     }
 }

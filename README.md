@@ -1,4 +1,4 @@
-# Deno SerialPort
+# Deno SerialConnection
 
 [![Tags](https://img.shields.io/github/release/DjDeveloperr/deno_serial)](https://github.com/DjDeveloperr/deno_serial/releases)
 [![License](https://img.shields.io/github/license/DjDeveloperr/deno_serial)](https://github.com/DjDeveloperr/deno_serial/blob/master/LICENSE)
@@ -23,12 +23,12 @@ deno run --allow-ffi -r https://raw.githubusercontent.com/jeff-hykin/deno_serial
 ## Usage
 
 ```ts
-import { getPorts, open } from "https://esm.sh/gh/jeff-hykin/deno_serial/mod.ts";
+import { listPorts, connect } from "https://esm.sh/gh/jeff-hykin/deno_serial/src/main.ts";
 
-const ports = await getPorts();
+const ports = await listPorts();
 console.log("Ports:", ports);
 
-const port = await open(ports[0].name, { baudRate: 9600 });
+const port = await connect(ports[0], { baudRate: 9600 });
 await port.write("Hello, world!");
 await port.write(new Uint8Array([0x01, 0x02, 0x03]));
 let data = await port.read()

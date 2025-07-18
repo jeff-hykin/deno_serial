@@ -1,4 +1,4 @@
-import type { SerialPort, SerialOptions } from "../common/serial_port.ts"
+import type { SerialConnection, SerialOptions } from "../common/serial_port.ts"
 import { getBit, setBit } from "../common/util.ts"
 export * as Comm from "./system_apis/api/Devices/Communication.ts"
 export * as Foundation from "./system_apis/api/Foundation.ts"
@@ -92,7 +92,7 @@ function dcbToFlowControl(dcb: Comm.DCBView) {
 }
 
 let comstat: Uint8Array
-export class SerialPortWin implements SerialPort {
+export class SerialConnectionWin implements SerialConnection {
     name?: string
     options?: SerialOptions
     _handle?: Deno.PointerValue

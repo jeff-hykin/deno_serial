@@ -1,8 +1,8 @@
 import { cString, bigIntTo64IntLittleEndianBytes, int64LittleEndianBytesToBigInt } from "../common/util.ts"
 import { getDarwinLibSystem, UnixError, unwrap, CREAD, CLOCAL, PARENB, PARODD, CSTOPB, CSIZE, CS7, CS8, CRTSCTS, IXON, IXOFF, IXANY, ICANON, ECHO, ECHOE, ISIG, VMIN, VTIME, TCSANOW, F_SETFL, O_RDWR, O_NOCTTY, O_NDELAY, OPOST, INPCK, IGNPAR } from "./system_apis/lib_system.ts"
-import { SerialOptions, SerialPort } from "../common/serial_port.ts"
+import { SerialOptions, SerialConnection } from "../common/serial_port.ts"
 
-export class SerialPortDarwin implements SerialPort, AsyncDisposable {
+export class SerialConnectionDarwin implements SerialConnection, AsyncDisposable {
     name?: string
     options?: SerialOptions
     _fd?: number
@@ -212,6 +212,6 @@ export class SerialPortDarwin implements SerialPort, AsyncDisposable {
     }
 
     [Symbol.for("Deno.customInspect")](inspect: typeof Deno.inspect, options: Deno.InspectOptions) {
-        return `SerialPort ${inspect({ name: this.name, state: this._state }, options)}`
+        return `SerialConnection ${inspect({ name: this.name, state: this._state }, options)}`
     }
 }

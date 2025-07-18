@@ -2,7 +2,7 @@ import * as Di from "./system_apis/api/Devices/DeviceAndDriverInstallation.ts"
 export * as Reg from "./system_apis/api/System/Registry.ts"
 export { unwrap } from "./system_apis/util.ts"
 
-import { SerialPortInfo } from "../common/serial_port.ts"
+import { Port } from "../common/serial_port.ts"
 
 export type PortType = "USB" | "Bluetooth" | "PCI"
 
@@ -63,12 +63,12 @@ export function SetupDiClassGuidsFromNameA(className: string) {
     return guids
 }
 
-export function getPortsWin(): SerialPortInfo[] {
+export function getPortsWin(): Port[] {
     const devInfoData = Di.allocSP_DEVINFO_DATA({
         cbSize: Di.sizeofSP_DEVINFO_DATA,
     })
 
-    const ports: SerialPortInfo[] = []
+    const ports: Port[] = []
     for (const guid of SetupDiClassGuidsFromNameA("Ports")) {
         const devInfoList = Di.SetupDiGetClassDevsA(guid, null, null, Di.DIGCF_PRESENT)!
         unwrap(Number(Deno.UnsafePointer.value(devInfoList)))

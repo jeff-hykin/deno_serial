@@ -1,7 +1,7 @@
 import { getIokit, ioreturn, kIOSerialBSDServiceValue } from "./system_apis/iokit.ts"
 import { getCorefoundation, createCFString } from "./system_apis/corefoundation.ts"
 import { cString, deref, refptr } from "../common/util.ts"
-import { SerialPortInfo } from "../common/serial_port.ts"
+import { Port } from "../common/serial_port.ts"
 
 const stringBuffer = new Uint8Array(256)
 
@@ -92,7 +92,7 @@ function getStringProperty(deviceType: Deno.PointerValue, name: string) {
     return readStringBuffer()
 }
 
-function getPortInfo(service: Deno.PointerValue, name: string): SerialPortInfo {
+function getPortInfo(service: Deno.PointerValue, name: string): Port {
     const usbDevice = getParentDeviceByType(service, usbDeviceClassName) ?? getParentDeviceByType(service, kIOUSBDeviceClassName)
 
     if (usbDevice) {
@@ -111,8 +111,8 @@ function getPortInfo(service: Deno.PointerValue, name: string): SerialPortInfo {
     }
 }
 
-export function getPortsDarwin(): SerialPortInfo[] {
-    const ports: SerialPortInfo[] = []
+export function getPortsDarwin(): Port[] {
+    const ports: Port[] = []
     const iokit = getIokit()
     const corefoundation = getCorefoundation()
     const matchingServices = iokit.IOServiceMatching(kIOSerialBSDServiceValue)

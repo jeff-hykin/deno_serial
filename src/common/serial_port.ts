@@ -1,4 +1,4 @@
-export interface SerialPortInfo {
+export interface Port {
     name: string // TODO: change to path
     type?: string
     friendlyName?: string
@@ -8,7 +8,7 @@ export interface SerialPortInfo {
     serialNumber?: string
 }
 
-export interface SerialPort {
+export interface SerialConnection {
     readonly name?: string
     readonly options?: SerialOptions
     open(options: SerialOptions): Promise<void>
@@ -28,11 +28,4 @@ export interface SerialOptions {
     flowControl?: FlowControlType
     bufferSize?: number // default 255
     timeoutSeconds?: number
-}
-
-export interface SerialInputSignals {
-    dataCarrierDetect: boolean
-    ringIndicator: boolean
-    dataSetReady: boolean
-    clearToSend: boolean
 }
