@@ -1,10 +1,10 @@
 import type { SerialPort, SerialOptions } from "../common/serial_port.ts"
 import { getBit, setBit } from "../common/util.ts"
-export * as Comm from "./system_apis/api/Devices/Communication.ts";
-export * as Foundation from "./system_apis/api/Foundation.ts";
-export * as Fs from "./system_apis/api/Storage/FileSystem.ts";
-export { OverlappedPromise } from "./system_apis/overlapped.ts";
-export { unwrap } from "./system_apis/util.ts";
+export * as Comm from "./system_apis/api/Devices/Communication.ts"
+export * as Foundation from "./system_apis/api/Foundation.ts"
+export * as Fs from "./system_apis/api/Storage/FileSystem.ts"
+export { OverlappedPromise } from "./system_apis/overlapped.ts"
+export { unwrap } from "./system_apis/util.ts"
 
 export enum ClearBuffer {
     INPUT,
@@ -36,21 +36,21 @@ export enum FlowControl {
     HARDWARE,
 }
 
-const fBinary            = 0b0000_0000_0000_0001
+const fBinary = 0b0000_0000_0000_0001
 // const         fParity = 0b0000_0000_0000_0010
-const fOutxCtsFlow       = 0b0000_0000_0000_0100
-const fOutxDsrFlow       = 0b0000_0000_0000_1000
-const fDtrControl0       = 0b0000_0000_0001_0000
-const fDtrControl1       = 0b0000_0000_0010_0000
-const fDsrSensitivity    = 0b0000_0000_0100_0000
-const fOutX              = 0b0000_0001_0000_0000
-const fInX               = 0b0000_0010_0000_0000
-const fErrorChar         = 0b0000_0100_0000_0000
-const fNull              = 0b0000_1000_0000_0000
-const fRtsControl0       = 0b0001_0000_0000_0000
-const fRtsControl1       = 0b0010_0000_0000_0000
+const fOutxCtsFlow = 0b0000_0000_0000_0100
+const fOutxDsrFlow = 0b0000_0000_0000_1000
+const fDtrControl0 = 0b0000_0000_0001_0000
+const fDtrControl1 = 0b0000_0000_0010_0000
+const fDsrSensitivity = 0b0000_0000_0100_0000
+const fOutX = 0b0000_0001_0000_0000
+const fInX = 0b0000_0010_0000_0000
+const fErrorChar = 0b0000_0100_0000_0000
+const fNull = 0b0000_1000_0000_0000
+const fRtsControl0 = 0b0001_0000_0000_0000
+const fRtsControl1 = 0b0010_0000_0000_0000
 // const     fRtsControl = 0b0011_0000_0000_0000
-const fAbortOnError      = 0b0100_0000_0000_0000
+const fAbortOnError = 0b0100_0000_0000_0000
 
 function flowControlToDcb(flowControl: FlowControl, dcb: Comm.DCBView) {
     let bits = dcb._bitfield
@@ -91,10 +91,10 @@ function dcbToFlowControl(dcb: Comm.DCBView) {
     }
 }
 
-let comstat : Uint8Array
+let comstat: Uint8Array
 export class SerialPortWin implements SerialPort {
-    name?: string;
-    options?: SerialOptions;
+    name?: string
+    options?: SerialOptions
     _handle?: Deno.PointerValue
     _timeout = 2
     __dcb?: Comm.DCBView
@@ -102,10 +102,10 @@ export class SerialPortWin implements SerialPort {
     constructor(name: string) {
         this.name = name
     }
-    
+
     open(options: SerialOptions) {
         this.options = options
-        const windowsOptions = {...options}
+        const windowsOptions = { ...options }
         if (!comstat) {
             comstat = Comm.allocCOMSTAT()
         }
@@ -117,18 +117,16 @@ export class SerialPortWin implements SerialPort {
             throw new TypeError("Invalid flowControl, must be one of: none, software, hardware")
         }
         windowsOptions.stopBits = windowsOptions.stopBits == 1 ? StopBits.ONE : StopBits.TWO
-        windowsOptions.flowControl =
-            {
-                none: FlowControl.NONE,
-                software: FlowControl.SOFTWARE,
-                hardware: FlowControl.HARDWARE,
-            }[windowsOptions.flowControl||"none"]
-        windowsOptions.parity =
-            {
-                none: Parity.NONE,
-                even: Parity.EVEN,
-                odd: Parity.ODD,
-            }[windowsOptions.parity||"none"]
+        windowsOptions.flowControl = {
+            none: FlowControl.NONE,
+            software: FlowControl.SOFTWARE,
+            hardware: FlowControl.HARDWARE,
+        }[windowsOptions.flowControl || "none"]
+        windowsOptions.parity = {
+            none: Parity.NONE,
+            even: Parity.EVEN,
+            odd: Parity.ODD,
+        }[windowsOptions.parity || "none"]
         windowsOptions.timeout = windowsOptions.timeoutSeconds ?? 2
 
         // start the normal handling
@@ -161,7 +159,7 @@ export class SerialPortWin implements SerialPort {
         this.__dcb = dv
 
         this.timeout = windowsOptions.timeout ?? 0
-        
+
         return Promise.resolve()
     }
 
@@ -396,6 +394,6 @@ export class SerialPortWin implements SerialPort {
         if (this._handle) {
             Foundation.CloseHandle(this._handle)
         }
-        return Promise.resolve();
+        return Promise.resolve()
     }
 }

@@ -55,8 +55,8 @@ import {
 
 let libc
 export class SerialPortLinux implements AsyncDisposable, SerialPort {
-    name?: string;
-    options?: SerialOptions;
+    name?: string
+    options?: SerialOptions
     _fd: number | undefined
     _state: "opened" | "closed" | "uninitialized" = "uninitialized"
 
